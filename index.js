@@ -16,7 +16,10 @@ const PORT = process.env.PORT || 5000;
 let products = [
   { id: uuidv4(), name: "iPhone" },
   { id: uuidv4(), name: "AirPods" },
-  { id: uuidv4(), name: "MacBook" }
+  { id: uuidv4(), name: "MacBook" },
+    { id: uuidv4(), name: "iPhone 16" },
+  { id: uuidv4(), name: "AirPods White" },
+  { id: uuidv4(), name: "MacBook M2" }
 ];
 
 app.get('/', (req, res) => {
