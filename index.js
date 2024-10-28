@@ -19,7 +19,8 @@ let products = [
   { id: uuidv4(), name: "MacBook" },
     { id: uuidv4(), name: "iPhone 16" },
   { id: uuidv4(), name: "AirPods White" },
-  { id: uuidv4(), name: "MacBook M2" }
+  { id: uuidv4(), name: "MacBook M2" },
+   { id: uuidv4(), name: "MacBook M1" }
 ];
 
 app.get('/', (req, res) => {
