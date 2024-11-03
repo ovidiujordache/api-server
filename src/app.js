@@ -2,13 +2,21 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Customer = require('./models/customer');
 const Product = require('./models/product');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
-dotenv.config();
+//dotenv.config();
 
 const app = express();
 const cors = require('cors');
 // require("dotenv").config();
 mongoose.set('strictQuery', false);
+
+const corsOptions = {
+  origin: 'http://localhost:3000', 
+  methods: ['GET', 'POST'], 
+  credentials: true, 
+};
 
 app.use(cors());
 app.use(express.json());
@@ -20,6 +28,17 @@ if(process.env.NODE_ENV !== 'production') {
 
 const PORT = process.env.PORT || 5000;
 const CONNECTION = process.env.CONNECTION;
+const SECRETKEY = process.env.SECRETKEY;
+
+async function authenticateCustomer(emailid, authpassword) {
+  const customer = await Customer.findOne({ customeremail: emailid }); 
+  if (!customer) {
+     return null; 
+  }
+  const isMatch = await bcrypt.compare(authpassword, customer.password);
+  return isMatch ? customer : null;
+}
+
 
 
 //customer.save();
@@ -28,7 +47,7 @@ app.get('/', (req, res) => {
    res.send("Welcome!");
 });
 
-/*app.get('/api/customers', async (req, res) => {
+app.get('/api/customers', async (req, res) => {
   console.log(await mongoose.connection.db.listCollections().toArray());
   try {
      const result = await Customer.find();
@@ -36,7 +55,7 @@ app.get('/', (req, res) => {
   } catch(e){
     res.status(500).json({error: e.message});
   };
-});*/
+});
 
 app.get('/api/products', async (req, res) => {
   console.log(await mongoose.connection.db.listCollections().toArray());
@@ -48,7 +67,7 @@ app.get('/api/products', async (req, res) => {
   };
 });
 
-/*app.post('/api/customers', async (req, res) => {
+app.post('/api/customers', async (req, res) => {
    console.log(req.body);
    const customer = new Customer(req.body);
    try {
@@ -57,7 +76,7 @@ app.get('/api/products', async (req, res) => {
    } catch(e) {
       res.status(400).json({error: e.message});
    };
-});*/
+});
 
 app.post('/api/products', async (req, res) => {
    console.log(req.body);
@@ -70,7 +89,74 @@ app.post('/api/products', async (req, res) => {
    };
 });
 
-/*app.get('/api/customers/:id', async(req, res) => {
+app.post('/auth/register', async (req, res) => {
+    const { customername, customeremail, password } = req.body;
+    console.log('SECRETKEY:', SECRETKEY); 
+    console.log("customername", customername);
+    console.log("customeremail", customeremail);
+    console.log("password", password);
+
+    if (!customername || !customeremail || !password) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const existingCustomer = await Customer.findOne({ customeremail });
+    if (existingCustomer) {
+        return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    const customer = new Customer({
+        customername,
+        customeremail,
+        password,
+    });
+
+ 
+    try {
+        await customer.save();
+      
+        return res.status(201).json({
+            customeremail: customer.customeremail,
+            customername: customer.customername,
+       
+        });
+    } catch (error) {
+        console.error('Error saving customer:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
+
+app.post('/auth/login', async (req, res) => {
+    const { customeremail, password } = req.body;
+
+  
+    const customer = await authenticateCustomer(customeremail, password);
+
+
+    if (!customer) {
+        return res.status(401).json({ error: 'Authentication failed' });
+    }
+
+    const token = jwt.sign(
+        { customerId: customer._id, customeremail: customer.customeremail },
+        SECRETKEY,
+        { expiresIn: '1h' } 
+    );
+
+   
+    res.json({
+        token,
+        customer: {
+            email: customer.customeremail,
+            name: customer.customername 
+        }
+    });
+});
+
+
+app.get('/api/customers/:id', async(req, res) => {
    console.log({
        requestParams: req.params,
        requestQuery: req.query
@@ -88,7 +174,7 @@ app.post('/api/products', async (req, res) => {
    } catch(e) {
       res.status(500).json({error: 'something went wrong'});
    }
-});*/
+});
 
 app.get('/api/products/:id', async(req, res) => {
    console.log({
@@ -110,7 +196,7 @@ app.get('/api/products/:id', async(req, res) => {
    }
 });
 
-/*app.put('/api/customers/:id', async(req, res) => {
+app.put('/api/customers/:id', async(req, res) => {
   try {
        const customerId = req.params.id;
        // const result = await Customer.replaceOne({_id: customerId}, req.body);
@@ -122,7 +208,7 @@ app.get('/api/products/:id', async(req, res) => {
        console.log(e.message);
        res.status(500).json({error: 'something went wrong'});
   }     
-});*/
+});
 
 app.put('/api/products/:id', async(req, res) => {
   try {
@@ -139,7 +225,7 @@ app.put('/api/products/:id', async(req, res) => {
 });
 
 
-/*app.patch('/api/customers/:id', async(req, res) => {
+app.patch('/api/customers/:id', async(req, res) => {
    try {
        const customerId = req.params.id;
        const customer = await Customer.findOneAndUpdate({_id: customerId}, req.body, {new: true});
@@ -149,7 +235,7 @@ app.put('/api/products/:id', async(req, res) => {
        console.log(e.message);
        res.status(500).json({error: 'something went wrong'});
   }  
-});*/
+});
 
 app.patch('/api/products/:id', async(req, res) => {
    try {
@@ -203,7 +289,7 @@ app.patch('/api/products/:id', async(req, res) => {
 
 //});
 
-/*app.delete('/api/customers/:id', async(req, res) => {
+app.delete('/api/customers/:id', async(req, res) => {
   try {
     const customerId = req.params.id;
     const result = await Customer.deleteOne({_id: customerId});
@@ -212,7 +298,7 @@ app.patch('/api/products/:id', async(req, res) => {
     res.status(500).json({error: "Something went wrong"});
   } 
 });
-*/
+
 app.delete('/api/products/:id', async(req, res) => {
   try {
     const productId = req.params.id;
